@@ -1,26 +1,18 @@
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import pickle
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow import keras
-
-path = "D:/imagenet-mini"
-labels = os.listdir(path + "/train")
-test_labels = os.listdir(path + "/val")
-
-# train_data = tfds.ImageFolder(path, shape=(224, 224, 3)).as_dataset(split='train', shuffle_files=True)
-# test_data = tfds.ImageFolder(path, shape=(224, 224, 3)).as_dataset(split='val', shuffle_files=True)
-train_data = tf.keras.utils.image_dataset_from_directory(
-    path, labels='inferred', label_mode='int',
-    class_names=None, color_mode='rgb', batch_size=32, image_size=(256,
-    256), shuffle=True, seed=None, validation_split=None, subset=None,
-    interpolation='bilinear', follow_links=False,
-    crop_to_aspect_ratio=False, **kwargs
-)
+from tensorflow.keras.applications.vgg16 import preprocess_input
+from utils import gen_datasets
 
 
-assert labels == test_labels
+path = "E:/imagenet-mini"
+
+train_data = gen_datasets(path + "/train", batch_size=32, shuffle=True, seed=None,)
+test_data = gen_datasets(path + "/val", batch_size=64, shuffle=True, seed=None,)
 
 model = tf.keras.applications.vgg16.VGG16(
     include_top=True,
@@ -31,12 +23,20 @@ model = tf.keras.applications.vgg16.VGG16(
 )
 model.trainable = False
 
-for layer in model.layers:
-    # print(layer.input)
-    print(layer)
+base_learning_rate = 0.0001
 
+# original VGG model...
+model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+model.evaluate(test_data, batch_size=32)
+
+## reduced model...
 reduced_model = keras.Sequential(
-    [keras.layers.Conv2D(32, kernel_size=3, strides=1, padding="same")] + model.layers
+    [keras.layers.Conv2D(64, kernel_size=3, strides=2, padding="same")] + model.layers[4:]
 )
 
-model.evaluate()
+reduced_model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+reduced_model.evaluate(test_data, batch_size=32)
