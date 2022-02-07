@@ -10,7 +10,8 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 from utils import gen_datasets
 
 
-path = "E:/imagenet-mini"
+# path = "C:/imagenet-mini"
+path = "C:/imagenet"
 
 train_data = gen_datasets(
     path + "/train",
@@ -32,28 +33,28 @@ model = tf.keras.applications.vgg16.VGG16(
     pooling=None,
     classes=1000,
 )
-model.trainable = False
+# model.trainable = False
 
-base_learning_rate = 0.0001
+# base_learning_rate = 0.0001
 
 # original VGG model...
-model.compile(
-    optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
-    loss="categorical_crossentropy",
-    metrics=["accuracy"],
-)
+# model.compile(
+#     optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
+#     loss="categorical_crossentropy",
+#     metrics=["accuracy"],
+# )
 model.evaluate(test_data, batch_size=32)
-
-## reduced model...
-reduced_model = keras.Sequential(
-    [keras.layers.Conv2D(64, kernel_size=3, strides=2, padding="same")]
-    + model.layers[4:]
-)
-
-reduced_model.compile(
-    optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
-    loss="categorical_crossentropy",
-    metrics=["accuracy"],
-)
-reduced_model.fit(train_data, batch_size=32, epochs=10)
-reduced_model.evaluate(test_data, batch_size=32)
+#
+# ## reduced model...
+# reduced_model = keras.Sequential(
+#     [keras.layers.Conv2D(64, kernel_size=3, strides=2, padding="same")]
+#     + model.layers[4:]
+# )
+#
+# reduced_model.compile(
+#     optimizer=tf.keras.optimizers.RMSprop(learning_rate=base_learning_rate),
+#     loss="categorical_crossentropy",
+#     metrics=["accuracy"],
+# )
+# reduced_model.fit(train_data, batch_size=32, epochs=10)
+# reduced_model.evaluate(test_data, batch_size=32)
