@@ -31,7 +31,7 @@ interpolation_list = [
     # torchvision.transforms.InterpolationMode.BICUBIC,
 ]
 # input_size_list = [224, 196, 160, 128, 64]
-input_size_list = [160]
+input_size_list = [196]
 
 normalize = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
@@ -75,8 +75,6 @@ for inter in interpolation_list:
                 # (sample_fname, l) = test_loader.dataset.samples[i]
                 true_or_false += list((predicted == labels).detach().cpu().numpy())
 
-
-
         print(
             f"Accuracy of the network on the {total} test images: {100 * correct / total} %"
         )
@@ -84,6 +82,6 @@ for inter in interpolation_list:
 
 img_info = test_loader.dataset.imgs
 
-with open("true.txt", "w") as f:
+with open("true_%d.txt" % input_size, "w") as f:
     for i in range(len(true_or_false)):
-        f.write("['%s', %d, %s],\n" % (img_info[i][0], img_info[i][1], str(true_or_false[i])))
+        f.write("['%s', %d, %s],\n" % (img_info[i][0].replace("\\", "/"), img_info[i][1], str(true_or_false[i])))
