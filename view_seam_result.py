@@ -26,6 +26,7 @@ else:
 model = models.resnext50_32x4d(pretrained=True)
 model = model.to(device)
 model.eval()
+mode = "forward"
 
 with torch.no_grad():
     for i, label_dir in enumerate(label_list):
@@ -40,7 +41,8 @@ with torch.no_grad():
         plt.imshow(np.array(curr_image))
 
         plt.subplot(2, 2, 2)
-        img_160 = seam_carving.resize(curr_image, (160, 160), energy_mode="backward")
+        # img_160 = seam_carving.resize(curr_image, (160, 160), energy_mode="backward")
+        img_160 = seam_carving.resize(curr_image, (160, 160), energy_mode=mode)
         input_tensor = preprocess(Image.fromarray(img_160))
         input_batch = input_tensor.unsqueeze(0)
         output = model(input_batch.float().to("cuda"))
@@ -50,7 +52,7 @@ with torch.no_grad():
         IS_TRUE = predicted.data.item() == i
 
         plt.subplot(2, 2, 3)
-        img_128 = seam_carving.resize(curr_image, (128, 128), energy_mode="backward")
+        img_128 = seam_carving.resize(curr_image, (128, 128), energy_mode=mode)
         input_tensor = preprocess(Image.fromarray(img_128))
         input_batch = input_tensor.unsqueeze(0)
         output = model(input_batch.float().to("cuda"))
@@ -59,7 +61,7 @@ with torch.no_grad():
         plt.imshow(img_128)
 
         plt.subplot(2, 2, 4)
-        img_64 = seam_carving.resize(curr_image, (64, 64), energy_mode="backward")
+        img_64 = seam_carving.resize(curr_image, (64, 64), energy_mode=mode)
         input_tensor = preprocess(Image.fromarray(img_64))
         input_batch = input_tensor.unsqueeze(0)
         output = model(input_batch.float().to("cuda"))
