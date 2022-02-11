@@ -22,7 +22,7 @@ new_model = torch.nn.Sequential(*f_model).to(device)
 new_model.eval()
 
 input_size = 224
-resize_size = 112
+resize_size = 256
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
 # interpolation = torchvision.transforms.InterpolationMode.NEAREST
 # interpolation = torchvision.transforms.InterpolationMode.BICUBIC
@@ -31,7 +31,7 @@ transform = T.Compose(
     [
         T.Resize(resize_size, interpolation=interpolation),
         T.ToPILImage(),
-        channel_repeat,
+        # channel_repeat,
         # T.CenterCrop(input_size),
         T.ToTensor(),
         normalize,
@@ -44,7 +44,7 @@ my_dataset = torchvision.datasets.ImageNet(
 test_loader = torch.utils.data.DataLoader(
     my_dataset,
     batch_size=128,
-    shuffle=False,
+    shuffle=True,
     num_workers=0,
 )
 
@@ -78,6 +78,7 @@ with torch.no_grad():
                 plt.subplot(8, 8, j + 1)
                 plt.imshow(outputs[0, j, :, :].detach().cpu().numpy())
                 plt.show()
+        break
 
 
 print(f"Accuracy of the network on the {total} test images: {100 * correct / total} %")

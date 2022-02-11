@@ -34,20 +34,60 @@ def timeit(method):
     return timed
 
 
-@timeit
+# @timeit
+def histogram_equalization(img):
+    # 1
+    (N, M) = img.shape
+
+    img = (img*255).astype(np.uint8)
+
+    G = 256  # gray levels
+    H = np.zeros(G)  # initialize an array Histogram
+
+    # 2
+    for g in img.ravel():
+        H[g] += 1
+
+    g_min = np.min(np.nonzero(H))
+
+    # 3
+    H_c = np.zeros_like(H)  # cumulative image histogram
+    H_c[0] = H[0]
+    for g in range(1, G):
+        H_c[g] = H_c[g - 1] + H[g]
+
+    H_min = H_c[g_min]
+
+    # 4
+    T = np.round((H_c - H_min) / (M * N - H_min) * (G - 1))
+
+    # 5
+    result = np.zeros_like(img)
+    for n in range(N):
+        for m in range(M):
+            result[n, m] = T[img[n, m]]
+
+    result = result/255.
+
+    return result, T
+
 def _rgb2gray(rgb: np.ndarray) -> np.ndarray:
     """Convert an RGB image to a grayscale image"""
     coeffs = np.array([0.2125, 0.7154, 0.0721], dtype=np.float32)
-    return (rgb @ coeffs).astype(rgb.dtype)
+    gray = (rgb @ coeffs).astype(rgb.dtype)
+
+    hist_eq_gray, _ = histogram_equalization(gray)
+
+    return hist_eq_gray #(rgb @ coeffs).astype(rgb.dtype)
 
 
-@timeit
+# @timeit
 def _get_seam_mask(src: np.ndarray, seam: np.ndarray) -> np.ndarray:
     """Convert a list of seam column indices to a mask"""
     return ~np.eye(src.shape[1], dtype=np.bool)[seam]
 
 
-@timeit
+# @timeit
 def _remove_seam_mask(src: np.ndarray, seam_mask: np.ndarray) -> np.ndarray:
     """Remove a seam from the source image according to the given seam_mask"""
     if src.ndim == 3:
@@ -60,7 +100,7 @@ def _remove_seam_mask(src: np.ndarray, seam_mask: np.ndarray) -> np.ndarray:
     return dst
 
 
-@timeit
+# @timeit
 def _remove_seam(src: np.ndarray, seam: np.ndarray) -> np.ndarray:
     """Remove a seam from the source image, given a list of seam columns"""
     seam_mask = _get_seam_mask(src, seam)
@@ -68,7 +108,7 @@ def _remove_seam(src: np.ndarray, seam: np.ndarray) -> np.ndarray:
     return dst
 
 
-@timeit
+# @timeit
 def _get_energy(gray: np.ndarray) -> np.ndarray:
     """Get backward energy map from the source image"""
     assert gray.ndim == 2
@@ -80,7 +120,7 @@ def _get_energy(gray: np.ndarray) -> np.ndarray:
     return energy
 
 
-@timeit
+# @timeit
 def _get_backward_seam(energy: np.ndarray) -> Tuple[np.ndarray, float]:
     """Compute the minimum vertical seam from the backward energy map"""
     assert energy.size > 0 and energy.ndim == 2
@@ -108,7 +148,7 @@ def _get_backward_seam(energy: np.ndarray) -> Tuple[np.ndarray, float]:
     return seam, total_cost
 
 
-@timeit
+# @timeit
 def _get_backward_seams(gray: np.ndarray, num_seams: int,
                         keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Compute the minimum N vertical seams using backward energy"""
@@ -142,7 +182,7 @@ def _get_backward_seams(gray: np.ndarray, num_seams: int,
     return seams_mask
 
 
-@timeit
+# @timeit
 def _get_forward_seam(gray: np.ndarray,
                       keep_mask: Optional[np.ndarray]
                       ) -> Tuple[np.ndarray, float]:
@@ -190,7 +230,7 @@ def _get_forward_seam(gray: np.ndarray,
     return seam, total_cost
 
 
-@timeit
+# @timeit
 def _get_forward_seams(gray: np.ndarray, num_seams: int,
                        keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Compute minimum N vertical seams using forward energy"""
@@ -210,7 +250,7 @@ def _get_forward_seams(gray: np.ndarray, num_seams: int,
     return seams_mask
 
 
-@timeit
+# @timeit
 def _get_seams(gray: np.ndarray, num_seams: int, energy_mode: str,
                keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Get the minimum N seams from the grayscale image"""
@@ -221,7 +261,7 @@ def _get_seams(gray: np.ndarray, num_seams: int, energy_mode: str,
         return _get_forward_seams(gray, num_seams, keep_mask)
 
 
-@timeit
+# @timeit
 def _reduce_width(src: np.ndarray, delta_width: int, energy_mode: str,
                   keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Reduce the width of image by delta_width pixels"""
@@ -240,7 +280,7 @@ def _reduce_width(src: np.ndarray, delta_width: int, energy_mode: str,
     return dst
 
 
-@timeit
+# @timeit
 def _expand_width(src: np.ndarray, delta_width: int, energy_mode: str,
                   keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Expand the width of image by delta_width pixels"""
@@ -272,7 +312,7 @@ def _expand_width(src: np.ndarray, delta_width: int, energy_mode: str,
     return dst
 
 
-@timeit
+# @timeit
 def _resize_width(src: np.ndarray, width: int, energy_mode: str,
                   keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Resize the width of image by removing vertical seams"""
@@ -288,7 +328,7 @@ def _resize_width(src: np.ndarray, width: int, energy_mode: str,
     return dst
 
 
-@timeit
+# @timeit
 def _resize_height(src: np.ndarray, height: int, energy_mode: str,
                    keep_mask: Optional[np.ndarray]) -> np.ndarray:
     """Resize the height of image by removing horizontal seams"""
@@ -301,7 +341,7 @@ def _resize_height(src: np.ndarray, height: int, energy_mode: str,
     return src
 
 
-@timeit
+# @timeit
 def _check_mask(mask: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
     """Ensure the mask to be a 2D grayscale map of specific shape"""
     mask = np.asarray(mask, dtype=np.bool)
@@ -314,7 +354,7 @@ def _check_mask(mask: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
     return mask
 
 
-@timeit
+# @timeit
 def _check_src(src: np.ndarray) -> np.ndarray:
     """Ensure the source to be RGB or grayscale"""
     src = np.asarray(src, dtype=np.uint8)
@@ -324,7 +364,7 @@ def _check_src(src: np.ndarray) -> np.ndarray:
     return src
 
 
-@timeit
+# @timeit
 def resize(src: np.ndarray, size: Tuple[int, int],
            energy_mode: str = 'backward', order: str = 'width-first',
            keep_mask: Optional[np.ndarray] = None) -> np.ndarray:
@@ -380,7 +420,7 @@ def resize(src: np.ndarray, size: Tuple[int, int],
     return src
 
 
-@timeit
+# @timeit
 def remove_object(src: np.ndarray, drop_mask: np.ndarray,
                   keep_mask: Optional[np.ndarray] = None) -> np.ndarray:
     """Remove an object on the source image.
