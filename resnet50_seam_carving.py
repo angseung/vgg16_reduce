@@ -6,11 +6,12 @@ from torchvision import transforms, models as models
 
 # import seam_carving
 from matplotlib import pyplot as plt
-from carve import resize
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from torchinfo import summary
+from utils import SeamCarvingResize, Resize
+from carve import resize
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -28,41 +29,6 @@ model_list = [
     # models.resnext50_32x4d(pretrained=True),
 ]
 
-
-class SeamCarvingResize:
-    def __init__(self, size, energy_mode="backward"):
-        if isinstance(size, int):
-            self.target_size = (size, size)
-        elif isinstance(size, tuple):
-            if len(size) == 2:
-                self.target_size = size
-            else:
-                raise ValueError("Size must be int or tuple with length 2 (h, w)")
-
-        self.energy_mode = energy_mode  # 'forward' or 'backward'
-
-    def __call__(self, img):
-        if not isinstance(img, np.ndarray):
-            image = np.array(img)
-
-        # dst = seam_carving.resize(
-        dst = resize(
-            image,
-            (self.target_size[0], self.target_size[1]),
-            energy_mode=self.energy_mode,  # Choose from {backward, forward}
-            order="width-first",  # Choose from {width-first, height-first}
-            keep_mask=None,
-        )
-
-        return Image.fromarray(dst)
-
-    def __repr__(self):
-        return self.__class__.__name__ + "(target_size=%d, energe_mode=%s)" % (
-            self.target_size[0],
-            self.energy_mode,
-        )
-
-
 input_size = 128
 resize_size = int(input_size * 256 / 224)
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
@@ -70,7 +36,7 @@ energy_mode = "backward"
 
 preprocess = transforms.Compose(
     [
-        transforms.Resize(resize_size, interpolation=interpolation),
+        Resize(resize_size, aspect="wide"),
         SeamCarvingResize(resize_size, energy_mode=energy_mode),
         transforms.CenterCrop(input_size),
         transforms.ToTensor(),

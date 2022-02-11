@@ -1,14 +1,82 @@
 import os
 from typing import Any
-
 import torch.nn
-
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow import keras
+from PIL import Image
 from image_dataset import image_dataset_from_directory
+from carve import resize
+
+
+class Resize:
+    def __init__(self, size, aspect='wide'):
+        if isinstance(size, int):
+            self.target_size = size
+        elif isinstance(size, tuple):
+            raise ValueError('Size must be integer type')
+
+        self.aspect = aspect  # 'wide' or 'narrow'
+
+    def __call__(self, img):
+        # if not isinstance(img, np.ndarray):
+        #     image = np.array(img)
+        # input must be PIL image type
+
+        w, h = img.size
+        if w < h:
+            if self.aspect == 'narrow':
+                ow = int(self.target_size * w / h)
+                oh = self.target_size
+            else:
+                ow = self.target_size
+                oh = int(self.target_size * h / w)
+        else:
+            if self.aspect == 'narrow':
+                ow = self.target_size
+                oh = int(self.target_size * h / w)
+
+            else:
+                ow = int(self.target_size * w / h)
+                oh = self.target_size
+
+        return img.resize((ow, oh))
+
+
+class SeamCarvingResize:
+    def __init__(self, size, energy_mode="backward"):
+        if isinstance(size, int):
+            self.target_size = (size, size)
+        elif isinstance(size, tuple):
+            if len(size) == 2:
+                self.target_size = size
+            else:
+                raise ValueError("Size must be int or tuple with length 2 (h, w)")
+
+        self.energy_mode = energy_mode  # 'forward' or 'backward'
+
+    def __call__(self, img):
+        if not isinstance(img, np.ndarray):
+            image = np.array(img)
+
+        # dst = seam_carving.resize(
+        dst = resize(
+            image,
+            (self.target_size[0], self.target_size[1]),
+            energy_mode=self.energy_mode,  # Choose from {backward, forward}
+            order="width-first",  # Choose from {width-first, height-first}
+            keep_mask=None,
+        )
+
+        return Image.fromarray(dst)
+
+    def __repr__(self):
+        return self.__class__.__name__ + "(target_size=%d, energe_mode=%s)" % (
+            self.target_size[0],
+            self.energy_mode,
+        )
 
 
 def gen_datasets(
