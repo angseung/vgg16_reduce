@@ -4,6 +4,7 @@ from PIL import Image
 import torchvision
 from torchvision import transforms, models as models
 # import seam_carving
+from matplotlib import pyplot as plt
 from carve import resize
 import numpy as np
 import pandas as pd
@@ -74,7 +75,7 @@ dataset = torchvision.datasets.ImageNet(
 test_loader = torch.utils.data.DataLoader(
     dataset,
     batch_size=128,
-    shuffle=True,
+    shuffle=False,
     num_workers=0,
 )
 
@@ -123,6 +124,7 @@ with torch.no_grad():
             true_prob = torch.nn.Softmax(dim=1)(outputs)[true_image_idx]
             prob_top5, _ = torch.topk(true_prob, 5)
             prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
+            ground_truth = dataset.classes[labels[true_image_idx].item()][0]
 
             fig1 = plt.figure(1)
             plt.subplot(311)
@@ -136,10 +138,11 @@ with torch.no_grad():
             plt.table(cellText=df.values, colLabels=df.columns, loc='center')
             plt.axis("off")
 
-            plt.suptitle("top-1 True, top-5 True \n%s" % test_loader.dataset.imgs[true_image_num][0].replace("\\", "/"))
+            plt.suptitle("[%s] top-1 True, top-5 True \n%s" % (ground_truth, test_loader.dataset.imgs[true_image_num][0].replace("\\", "/")))
             plt.tight_layout()
-            plt.show()
-            fig1.savefig("True_%s" % test_loader.dataset.imgs[true_image_num][0].replace("\\", "/").split("/")[-1], dpi=200)
+            # plt.show()
+            fig1.savefig("outs/True_%s" % test_loader.dataset.imgs[true_image_num][0].replace("\\", "/").split("/")[-1], dpi=200)
+            plt.close(fig1)
 
             ## Flase case plot...
             true_image_idx = np.where(top_1_list == False)[0][-1]
@@ -154,6 +157,7 @@ with torch.no_grad():
             true_prob = torch.nn.Softmax(dim=1)(outputs)[true_image_idx]
             prob_top5, _ = torch.topk(true_prob, 5)
             prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
+            ground_truth = dataset.classes[labels[true_image_idx].item()][0]
 
             fig2 = plt.figure(2)
             plt.subplot(311)
@@ -167,13 +171,12 @@ with torch.no_grad():
             plt.table(cellText=df.values, colLabels=df.columns, loc='center')
             plt.axis("off")
 
-            plt.suptitle("top-1 False, top-5 %s \n%s" % (bool(torch.eq(predicted_top5, labels.view(-1, 1)).sum(axis=1)[true_image_idx].item()),
+            plt.suptitle("[%s] top-1 False, top-5 %s \n%s" % (ground_truth, bool(torch.eq(predicted_top5, labels.view(-1, 1)).sum(axis=1)[true_image_idx].item()),
                                                       test_loader.dataset.imgs[true_image_num][0].replace("\\", "/")))
             plt.tight_layout()
-            plt.show()
-            fig2.savefig("False_%s" % test_loader.dataset.imgs[true_image_num][0].replace("\\", "/").split("/")[-1], dpi=200)
+            # plt.show()
+            fig2.savefig("outs/False_%s" % test_loader.dataset.imgs[true_image_num][0].replace("\\", "/").split("/")[-1], dpi=200)
+            plt.close(fig2)
 
 
         f.close()
-
-
