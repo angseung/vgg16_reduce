@@ -13,6 +13,42 @@ from seam_carving_v1 import seam_carve
 from utils import get_flatten_model, get_trimed_model, channel_repeat
 
 
+class SeamCarvingResize:
+    def __init__(self, size, energy_mode='backward'):
+        if isinstance(size, int):
+            self.target_size = (size, size)
+        elif isinstance(size, tuple):
+            if len(size) == 2:
+                self.target_size = size
+            else:
+                raise ValueError('Size must be int or tuple with length 2 (h, w)')
+
+        self.energy_mode = energy_mode  # 'forward' or 'backward'
+
+    def __call__(self, img):
+        if not isinstance(img, np.ndarray):
+            image = np.array(img)
+
+        dst = seam_carving.resize(
+            image, (self.target_size[0], self.target_size[1]),
+            energy_mode=self.energy_mode,  # Choose from {backward, forward}
+            order='width-first',  # Choose from {width-first, height-first}
+            keep_mask=None
+        )
+
+        return Image.fromarray(dst)
+
+
+input_size = 128
+interpolation = torchvision.transforms.InterpolationMode.BILINEAR
+preprocess = transforms.Compose([
+    transforms.Resize(256, interpolation=interpolation),
+    SeamCarvingResize(256, energy_mode='forward'),
+    transforms.CenterCrop(input_size),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
 if torch.cuda.is_available():
     device = "cuda"
 else:
@@ -22,124 +58,17 @@ model = models.resnext50_32x4d(pretrained=True)
 model = model.to(device)
 model.eval()
 
-# input_size = 64
-
-# input = (1, 3, input_size, input_size)
-# summary(model, input)
-
 interpolation_list = [
     torchvision.transforms.InterpolationMode.BILINEAR,
-    # torchvision.transforms.InterpolationMode.NEAREST,
-    # torchvision.transforms.InterpolationMode.BICUBIC,
 ]
-# input_size_list = [224, 196, 160, 128, 64]
-
-# crop = transforms.CenterCrop(input_size)
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 perf = {}
 
 image_list = [
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00000293.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00002138.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00003014.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00006697.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00007197.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00009111.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00009191.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00009346.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00009379.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00009396.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00010306.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00011233.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00011993.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00012503.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00013716.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00016018.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00017472.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00017699.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00017700.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00017995.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00018317.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00021740.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00023559.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00024235.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00024327.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00025129.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00025527.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00026064.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00026397.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00028158.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00029930.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00030740.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00031094.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00031333.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00034654.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00037375.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00037383.JPEG", 0, False],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00037596.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00037834.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00037861.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00039905.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00040358.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00040833.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00041939.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00045866.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00045880.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00046252.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00046499.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00048204.JPEG", 0, True],
-    ["C:/imagenet/val/n01440764/ILSVRC2012_val_00048969.JPEG", 0, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00000236.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00000262.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00000307.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00000994.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00002241.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00002848.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00003150.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00003735.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00004655.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00004677.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00005870.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00006007.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00006216.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00009034.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00010363.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00010509.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00011914.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00012880.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00013513.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00013623.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00016962.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00018075.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00019459.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00020436.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00020785.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00020822.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00021905.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00022138.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00023869.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00028713.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00030060.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00030217.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00031138.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00032235.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00032258.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00032675.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00034386.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00037846.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00038057.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00044095.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00045761.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00046915.JPEG", 1, False],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00046969.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00047396.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00047561.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00048840.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00048864.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00049585.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00049617.JPEG", 1, True],
-    ["C:/imagenet/val/n01443537/ILSVRC2012_val_00049712.JPEG", 1, True],
+    ["E:/imagenet-mini/val/n01440764/ILSVRC2012_val_00009111.JPEG", 0, False],
+    ["E:/imagenet-mini/val/n01440764/ILSVRC2012_val_00030740.JPEG", 0, True],
+    ["E:/imagenet-mini/val/n01440764/ILSVRC2012_val_00046252.JPEG", 0, False],
 ]
 
 input_size = 160
