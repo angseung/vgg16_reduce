@@ -4,12 +4,12 @@ import time
 import numpy as np
 from scipy.ndimage import sobel
 
-WIDTH_FIRST = 'width-first'
-HEIGHT_FIRST = 'height-first'
+WIDTH_FIRST = "width-first"
+HEIGHT_FIRST = "height-first"
 VALID_ORDERS = (WIDTH_FIRST, HEIGHT_FIRST)
 
-FORWARD_ENERGY = 'forward'
-BACKWARD_ENERGY = 'backward'
+FORWARD_ENERGY = "forward"
+BACKWARD_ENERGY = "backward"
 VALID_ENERGY_MODES = (FORWARD_ENERGY, BACKWARD_ENERGY)
 
 FROM_LEFT = True
@@ -24,15 +24,14 @@ def timeit(method):
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()
-        if 'log_time' in kw:
-            name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 1000)
+        if "log_time" in kw:
+            name = kw.get("log_name", method.__name__.upper())
+            kw["log_time"][name] = int((te - ts) * 1000)
         else:
-            print ('%r  %2.2f ms' % \
-                  (method.__name__, (te - ts) * 1000))
+            print("%r  %2.2f ms" % (method.__name__, (te - ts) * 1000))
         return result
-    return timed
 
+    return timed
 
 
 def interpolate(subBin, LU, RU, LB, RB, subX, subY):
@@ -44,16 +43,21 @@ def interpolate(subBin, LU, RU, LB, RB, subX, subY):
             inverseJ = subY - j
             val = subBin[i, j].astype(int)
             subImage[i, j] = np.floor(
-                (inverseI * (inverseJ * LU[val] + j * RU[val]) + i * (inverseJ * LB[val] + j * RB[val])) / float(num))
+                (
+                    inverseI * (inverseJ * LU[val] + j * RU[val])
+                    + i * (inverseJ * LB[val] + j * RB[val])
+                )
+                / float(num)
+            )
     return subImage
 
 
 def clahe(img, clipLimit, nrBins=128, nrX=0, nrY=0):
-    '''img - Input image
-       clipLimit - Normalized clipLimit. Higher value gives more contrast
-       nrBins - Number of graylevel bins for histogram("dynamic range")
-       nrX - Number of contextial regions in X direction
-       nrY - Number of Contextial regions in Y direction'''
+    """img - Input image
+    clipLimit - Normalized clipLimit. Higher value gives more contrast
+    nrBins - Number of graylevel bins for histogram("dynamic range")
+    nrX - Number of contextial regions in X direction
+    nrY - Number of Contextial regions in Y direction"""
     h, w = img.shape
 
     img = (img * 255).astype(np.uint8)
@@ -105,7 +109,7 @@ def clahe(img, clipLimit, nrBins=128, nrX=0, nrY=0):
     hist = np.zeros((nrX, nrY, nrBins))
     for i in range(nrX):
         for j in range(nrY):
-            bin_ = bins[i * xsz:(i + 1) * xsz, j * ysz:(j + 1) * ysz].astype(int)
+            bin_ = bins[i * xsz : (i + 1) * xsz, j * ysz : (j + 1) * ysz].astype(int)
             for i1 in range(xsz):
                 for j1 in range(ysz):
                     hist[i, j, bin_[i1, j1]] += 1
@@ -187,21 +191,21 @@ def clahe(img, clipLimit, nrBins=128, nrX=0, nrY=0):
             BL = map_[xB, yL, :]
             BR = map_[xB, yR, :]
             # print("CLAHE vals...")
-            subBin = bins[xI:xI + subX, yI:yI + subY]
+            subBin = bins[xI : xI + subX, yI : yI + subY]
             # print("clahe subBin shape: ",subBin.shape)
             subImage = interpolate(subBin, UL, UR, BL, BR, subX, subY)
-            claheimg[xI:xI + subX, yI:yI + subY] = subImage
+            claheimg[xI : xI + subX, yI : yI + subY] = subImage
             yI += subY
         xI += subX
 
     if excX == 0 and excY != 0:
-        return claheimg[:, :-excY] / 255.
+        return claheimg[:, :-excY] / 255.0
     elif excX != 0 and excY == 0:
-        return claheimg[:-excX, :] / 255.
+        return claheimg[:-excX, :] / 255.0
     elif excX != 0 and excY != 0:
-        return claheimg[:-excX, :-excY] / 255.
+        return claheimg[:-excX, :-excY] / 255.0
     else:
-        return claheimg / 255.
+        return claheimg / 255.0
 
 
 # @timeit
@@ -209,7 +213,7 @@ def histogram_equalization(img):
     # 1
     (N, M) = img.shape
 
-    img = (img*255).astype(np.uint8)
+    img = (img * 255).astype(np.uint8)
 
     G = 256  # gray levels
     H = np.zeros(G)  # initialize an array Histogram
@@ -237,9 +241,10 @@ def histogram_equalization(img):
         for m in range(M):
             result[n, m] = T[img[n, m]]
 
-    result = result/255.
+    result = result / 255.0
 
     return result, T
+
 
 def _rgb2gray(rgb: np.ndarray) -> np.ndarray:
     """Convert an RGB image to a grayscale image"""
@@ -249,7 +254,7 @@ def _rgb2gray(rgb: np.ndarray) -> np.ndarray:
     # hist_eq_gray, _ = histogram_equalization(gray)
     hist_eq_gray = clahe(gray, 8, 256, 0)
 
-    return hist_eq_gray #(rgb @ coeffs).astype(rgb.dtype)
+    return hist_eq_gray  # (rgb @ coeffs).astype(rgb.dtype)
 
 
 # @timeit
@@ -303,8 +308,7 @@ def _get_backward_seam(energy: np.ndarray) -> Tuple[np.ndarray, float]:
     for r in range(1, h):
         left_shift = np.hstack((cost[1:], np.inf))
         right_shift = np.hstack((np.inf, cost[:-1]))
-        min_idx = np.argmin([right_shift, cost, left_shift],
-                            axis=0) + base_idx
+        min_idx = np.argmin([right_shift, cost, left_shift], axis=0) + base_idx
         parent[r] = min_idx
         cost = cost[min_idx] + energy[r]
 
@@ -320,8 +324,9 @@ def _get_backward_seam(energy: np.ndarray) -> Tuple[np.ndarray, float]:
 
 
 # @timeit
-def _get_backward_seams(gray: np.ndarray, num_seams: int,
-                        keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _get_backward_seams(
+    gray: np.ndarray, num_seams: int, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Compute the minimum N vertical seams using backward energy"""
     h, w = gray.shape
     seams_mask = np.zeros((h, w), dtype=np.bool)
@@ -345,18 +350,18 @@ def _get_backward_seams(gray: np.ndarray, num_seams: int,
         hi = min(cur_w, np.max(seam) + 1)
         pad_lo = 1 if lo > 0 else 0
         pad_hi = 1 if hi < cur_w - 1 else 0
-        mid_block = gray[:, lo - pad_lo:hi + pad_hi]
+        mid_block = gray[:, lo - pad_lo : hi + pad_hi]
         _, mid_w = mid_block.shape
-        mid_energy = _get_energy(mid_block)[:, pad_lo:mid_w - pad_hi]
-        energy = np.hstack((energy[:, :lo], mid_energy, energy[:, hi + 1:]))
+        mid_energy = _get_energy(mid_block)[:, pad_lo : mid_w - pad_hi]
+        energy = np.hstack((energy[:, :lo], mid_energy, energy[:, hi + 1 :]))
 
     return seams_mask
 
 
 # @timeit
-def _get_forward_seam(gray: np.ndarray,
-                      keep_mask: Optional[np.ndarray]
-                      ) -> Tuple[np.ndarray, float]:
+def _get_forward_seam(
+    gray: np.ndarray, keep_mask: Optional[np.ndarray]
+) -> Tuple[np.ndarray, float]:
     """Compute the minimum vertical seam using forward energy"""
     assert gray.size > 0 and gray.ndim == 2
     gray = gray.astype(np.float32)
@@ -385,8 +390,7 @@ def _get_forward_seam(gray: np.ndarray,
         dp_left = np.hstack((np.inf, dp[:-1]))
         dp_right = np.hstack((dp[1:], np.inf))
 
-        choices = np.vstack([cost_left + dp_left, cost_top + dp,
-                             cost_right + dp_right])
+        choices = np.vstack([cost_left + dp_left, cost_top + dp, cost_right + dp_right])
         dp = np.min(choices, axis=0)
         parent[r] = np.argmin(choices, axis=0) + base_idx
 
@@ -402,8 +406,9 @@ def _get_forward_seam(gray: np.ndarray,
 
 
 # @timeit
-def _get_forward_seams(gray: np.ndarray, num_seams: int,
-                       keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _get_forward_seams(
+    gray: np.ndarray, num_seams: int, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Compute minimum N vertical seams using forward energy"""
     h, w = gray.shape
     seams_mask = np.zeros((h, w), dtype=np.bool)
@@ -422,8 +427,9 @@ def _get_forward_seams(gray: np.ndarray, num_seams: int,
 
 
 # @timeit
-def _get_seams(gray: np.ndarray, num_seams: int, energy_mode: str,
-               keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _get_seams(
+    gray: np.ndarray, num_seams: int, energy_mode: str, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Get the minimum N seams from the grayscale image"""
     assert energy_mode in VALID_ENERGY_MODES
     if energy_mode == BACKWARD_ENERGY:
@@ -433,8 +439,9 @@ def _get_seams(gray: np.ndarray, num_seams: int, energy_mode: str,
 
 
 # @timeit
-def _reduce_width(src: np.ndarray, delta_width: int, energy_mode: str,
-                  keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _reduce_width(
+    src: np.ndarray, delta_width: int, energy_mode: str, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Reduce the width of image by delta_width pixels"""
     assert src.ndim in (2, 3) and delta_width >= 0
     if src.ndim == 2:
@@ -452,8 +459,9 @@ def _reduce_width(src: np.ndarray, delta_width: int, energy_mode: str,
 
 
 # @timeit
-def _expand_width(src: np.ndarray, delta_width: int, energy_mode: str,
-                  keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _expand_width(
+    src: np.ndarray, delta_width: int, energy_mode: str, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Expand the width of image by delta_width pixels"""
     assert src.ndim in (2, 3) and delta_width >= 0
     if src.ndim == 2:
@@ -484,8 +492,9 @@ def _expand_width(src: np.ndarray, delta_width: int, energy_mode: str,
 
 
 # @timeit
-def _resize_width(src: np.ndarray, width: int, energy_mode: str,
-                  keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _resize_width(
+    src: np.ndarray, width: int, energy_mode: str, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Resize the width of image by removing vertical seams"""
     assert src.size > 0 and src.ndim in (2, 3)
     assert width > 0
@@ -500,13 +509,15 @@ def _resize_width(src: np.ndarray, width: int, energy_mode: str,
 
 
 # @timeit
-def _resize_height(src: np.ndarray, height: int, energy_mode: str,
-                   keep_mask: Optional[np.ndarray]) -> np.ndarray:
+def _resize_height(
+    src: np.ndarray, height: int, energy_mode: str, keep_mask: Optional[np.ndarray]
+) -> np.ndarray:
     """Resize the height of image by removing horizontal seams"""
     assert src.ndim in (2, 3) and height > 0
     if src.ndim == 3:
-        src = _resize_width(src.transpose((1, 0, 2)), height, energy_mode,
-                            keep_mask).transpose((1, 0, 2))
+        src = _resize_width(
+            src.transpose((1, 0, 2)), height, energy_mode, keep_mask
+        ).transpose((1, 0, 2))
     else:
         src = _resize_width(src.T, height, energy_mode, keep_mask).T
     return src
@@ -517,11 +528,15 @@ def _check_mask(mask: np.ndarray, shape: Tuple[int, int]) -> np.ndarray:
     """Ensure the mask to be a 2D grayscale map of specific shape"""
     mask = np.asarray(mask, dtype=np.bool)
     if mask.ndim != 2:
-        raise ValueError('Invalid mask of shape {}: expected to be a 2D '
-                         'binary map'.format(mask.shape))
+        raise ValueError(
+            "Invalid mask of shape {}: expected to be a 2D "
+            "binary map".format(mask.shape)
+        )
     if mask.shape != shape:
-        raise ValueError('The shape of mask must match the image: expected {}, '
-                         'got {}'.format(shape, mask.shape))
+        raise ValueError(
+            "The shape of mask must match the image: expected {}, "
+            "got {}".format(shape, mask.shape)
+        )
     return mask
 
 
@@ -530,15 +545,21 @@ def _check_src(src: np.ndarray) -> np.ndarray:
     """Ensure the source to be RGB or grayscale"""
     src = np.asarray(src, dtype=np.uint8)
     if src.size == 0 or src.ndim not in (2, 3):
-        raise ValueError('Invalid src of shape {}: expected an 3D RGB image or '
-                         'a 2D grayscale image'.format(src.shape))
+        raise ValueError(
+            "Invalid src of shape {}: expected an 3D RGB image or "
+            "a 2D grayscale image".format(src.shape)
+        )
     return src
 
 
 # @timeit
-def resize(src: np.ndarray, size: Tuple[int, int],
-           energy_mode: str = 'backward', order: str = 'width-first',
-           keep_mask: Optional[np.ndarray] = None) -> np.ndarray:
+def resize(
+    src: np.ndarray,
+    size: Tuple[int, int],
+    energy_mode: str = "backward",
+    order: str = "width-first",
+    keep_mask: Optional[np.ndarray] = None,
+) -> np.ndarray:
     """Resize the image using the content-aware seam-carving algorithm.
 
     :param src: A source image in RGB or grayscale format.
@@ -562,21 +583,27 @@ def resize(src: np.ndarray, size: Tuple[int, int],
     width = int(round(width))
     height = int(round(height))
     if width <= 0 or height <= 0:
-        raise ValueError('Invalid size {}: expected > 0'.format(size))
+        raise ValueError("Invalid size {}: expected > 0".format(size))
     if width >= 2 * src_w:
-        raise ValueError('Invalid target width {}: expected less than twice '
-                         'the source width (< {})'.format(width, 2 * src_w))
+        raise ValueError(
+            "Invalid target width {}: expected less than twice "
+            "the source width (< {})".format(width, 2 * src_w)
+        )
     if height >= 2 * src_h:
-        raise ValueError('Invalid target height {}: expected less than twice '
-                         'the source height (< {})'.format(height, 2 * src_h))
+        raise ValueError(
+            "Invalid target height {}: expected less than twice "
+            "the source height (< {})".format(height, 2 * src_h)
+        )
 
     if order not in VALID_ORDERS:
-        raise ValueError('Invalid order {}: expected {}'.format(
-            order, VALID_ORDERS))
+        raise ValueError("Invalid order {}: expected {}".format(order, VALID_ORDERS))
 
     if energy_mode not in VALID_ENERGY_MODES:
-        raise ValueError('Invalid energy mode {}: expected {}'.format(
-            energy_mode, VALID_ENERGY_MODES))
+        raise ValueError(
+            "Invalid energy mode {}: expected {}".format(
+                energy_mode, VALID_ENERGY_MODES
+            )
+        )
 
     if keep_mask is not None:
         keep_mask = _check_mask(keep_mask, (src_h, src_w))
@@ -592,8 +619,9 @@ def resize(src: np.ndarray, size: Tuple[int, int],
 
 
 # @timeit
-def remove_object(src: np.ndarray, drop_mask: np.ndarray,
-                  keep_mask: Optional[np.ndarray] = None) -> np.ndarray:
+def remove_object(
+    src: np.ndarray, drop_mask: np.ndarray, keep_mask: Optional[np.ndarray] = None
+) -> np.ndarray:
     """Remove an object on the source image.
 
     :param src: A source image in RGB or grayscale format.
@@ -630,5 +658,7 @@ def remove_object(src: np.ndarray, drop_mask: np.ndarray,
 if __name__ == "__main__":
     from PIL import Image
 
-    img = np.array(Image.open("E:/imagenet-mini/val/n01440764/ILSVRC2012_val_00009111.JPEG"))
+    img = np.array(
+        Image.open("E:/imagenet-mini/val/n01440764/ILSVRC2012_val_00009111.JPEG")
+    )
     img_resized = resize(img, size=(224, 224))

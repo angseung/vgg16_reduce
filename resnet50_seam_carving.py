@@ -128,9 +128,13 @@ with torch.no_grad():
                     )
                 )
                 true_image_label = predicted.detach().cpu().numpy()[true_image_idx]
-                true_image_label_5 = predicted_top5.detach().cpu().numpy()[true_image_idx]
+                true_image_label_5 = (
+                    predicted_top5.detach().cpu().numpy()[true_image_idx]
+                )
                 true_label = dataset.classes[true_image_label][0]
-                true_label_5 = np.array(dataset.classes, dtype=object)[true_image_label_5]
+                true_label_5 = np.array(dataset.classes, dtype=object)[
+                    true_image_label_5
+                ]
                 true_prob = torch.nn.Softmax(dim=1)(outputs)[true_image_idx]
                 prob_top5, _ = torch.topk(true_prob, 5)
                 prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
@@ -192,9 +196,13 @@ with torch.no_grad():
                     )
                 )
                 false_image_label = predicted.detach().cpu().numpy()[false_image_idx]
-                false_image_label_5 = predicted_top5.detach().cpu().numpy()[false_image_idx]
+                false_image_label_5 = (
+                    predicted_top5.detach().cpu().numpy()[false_image_idx]
+                )
                 false_label = dataset.classes[false_image_label][0]
-                false_label_5 = np.array(dataset.classes, dtype=object)[false_image_label_5]
+                false_label_5 = np.array(dataset.classes, dtype=object)[
+                    false_image_label_5
+                ]
                 false_prob = torch.nn.Softmax(dim=1)(outputs)[false_image_idx]
                 prob_top5, _ = torch.topk(false_prob, 5)
                 prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)

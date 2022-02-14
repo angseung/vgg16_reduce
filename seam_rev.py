@@ -20,15 +20,16 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
+
 class SeamCarvingResize:
-    def __init__(self, size, energy_mode='backward'):
+    def __init__(self, size, energy_mode="backward"):
         if isinstance(size, int):
             self.target_size = (size, size)
         elif isinstance(size, tuple):
             if len(size) == 2:
                 self.target_size = size
             else:
-                raise ValueError('Size must be int or tuple with length 2 (h, w)')
+                raise ValueError("Size must be int or tuple with length 2 (h, w)")
 
         self.energy_mode = energy_mode  # 'forward' or 'backward'
 
@@ -37,21 +38,25 @@ class SeamCarvingResize:
             image = np.array(img)
 
         dst = seam_carving.resize(
-            image, (self.target_size[0], self.target_size[1]),
+            image,
+            (self.target_size[0], self.target_size[1]),
             energy_mode=self.energy_mode,  # Choose from {backward, forward}
-            order='width-first',  # Choose from {width-first, height-first}
-            keep_mask=None
+            order="width-first",  # Choose from {width-first, height-first}
+            keep_mask=None,
         )
 
         return Image.fromarray(dst)
 
-preprocess = transforms.Compose([
-    # transforms.Resize(256),
-    SeamCarvingResize(256, energy_mode='forward'),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
+
+preprocess = transforms.Compose(
+    [
+        # transforms.Resize(256),
+        SeamCarvingResize(256, energy_mode="forward"),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
 model = models.resnext50_32x4d(pretrained=True)
 model = model.to(device)

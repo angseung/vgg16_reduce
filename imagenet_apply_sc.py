@@ -7,12 +7,13 @@ from PIL import Image
 from utils import SeamCarvingResize, Resize
 
 imagenet_path = "C:/imagenet/"
-input_size_list = [64,
-                   # 128,
-                   # 160,
-                   # 192,
-                   # 224,
-                   ]
+input_size_list = [
+    64,
+    # 128,
+    # 160,
+    # 192,
+    # 224,
+]
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
 energy_mode = "backward"
 split = "train"
@@ -22,7 +23,7 @@ for input_size in input_size_list:
 
     preprocess = transforms.Compose(
         [
-            Resize(resize_size, aspect='wide'),
+            Resize(resize_size, aspect="wide"),
             SeamCarvingResize(resize_size, energy_mode=energy_mode),
             transforms.CenterCrop(input_size),
             transforms.ToTensor(),
@@ -45,7 +46,7 @@ for input_size in input_size_list:
         fname = path[0].replace("\\", "/").split("/")
         fname[2] = fname[2] + "_%d" % input_size
         curr_dir_path = "/".join(fname[:-1])
-        os.makedirs(curr_dir_path, exist_ok=False)
+        os.makedirs(curr_dir_path, exist_ok=True)
 
     ## WRITE CONFIG LOG...
     with open("C:/imagenet/%s_%d/config.txt" % (split, input_size), "w") as f:

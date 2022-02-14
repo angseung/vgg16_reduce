@@ -1,6 +1,7 @@
 import os
 from typing import Any
 import torch.nn
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import numpy as np
 import tensorflow as tf
@@ -13,11 +14,11 @@ from carve import resize
 
 
 class Resize:
-    def __init__(self, size, aspect='wide'):
+    def __init__(self, size, aspect="wide"):
         if isinstance(size, int):
             self.target_size = size
         elif isinstance(size, tuple):
-            raise ValueError('Size must be integer type')
+            raise ValueError("Size must be integer type")
 
         self.aspect = aspect  # 'wide' or 'narrow'
 
@@ -28,14 +29,14 @@ class Resize:
 
         w, h = img.size
         if w < h:
-            if self.aspect == 'narrow':
+            if self.aspect == "narrow":
                 ow = int(self.target_size * w / h)
                 oh = self.target_size
             else:
                 ow = self.target_size
                 oh = int(self.target_size * h / w)
         else:
-            if self.aspect == 'narrow':
+            if self.aspect == "narrow":
                 ow = self.target_size
                 oh = int(self.target_size * h / w)
 

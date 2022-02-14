@@ -14,7 +14,7 @@ resize_size = int(input_size * 256 / 224)
 
 preprocess = transforms.Compose(
     [
-        Resize(resize_size, aspect='wide'),
+        Resize(resize_size, aspect="wide"),
         SeamCarvingResize(resize_size, energy_mode=energy_mode),
         transforms.CenterCrop(input_size),
         transforms.ToTensor(),

@@ -17,12 +17,24 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-torch.hub._validate_not_a_forked_repo = lambda a,b,c: True
+torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
+
+model_list = [
+    torch.hub.load("pytorch/vision:v0.10.0", "resnet50", pretrained=True),
+    # torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True),
+    # torch.hub.load('pytorch/vision:v0.10.0', 'shufflenet_v2_x1_0', pretrained=True),
+    # torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True),
+    # models.efficientnet_b1(pretrained=True),
+    # models.mnasnet1_0(pretrained=True),
+    # models.mobilenet_v2(pretrained=True),
+    # models.resnext50_32x4d(pretrained=True),
+]
 
 input_size = 64
 resize_size = int(input_size * 256 / 224)
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
 energy_mode = "backward"
+mode = "fine-tune"  # ["fine-tune", "feature-extract"]
 
 preprocess = transforms.Compose(
     [
@@ -30,19 +42,31 @@ preprocess = transforms.Compose(
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )
-dataset = ImageFolder(root="E:/imagenet-mini/train", transform=preprocess)
+train_dataset = ImageFolder(
+    root="C:/imagenet/train_%d" % input_size, transform=preprocess
+)
 trainloader = torch.utils.data.DataLoader(
-    dataset,
+    train_dataset,
     batch_size=128,
     shuffle=True,
     num_workers=0,
 )
+
+test_dataset = ImageFolder(root="C:/imagenet/val_%d" % input_size, transform=preprocess)
+testloader = torch.utils.data.DataLoader(
+    test_dataset,
+    batch_size=128,
+    shuffle=False,
+    num_workers=0,
+)
+
 model = model_list[0]
-for params in model.parameters():
-    params.requires_grad = False
+if mode == "feature-extract":
+    for params in model.parameters():
+        params.requires_grad = False
 
-model.conv1 = torch.nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-
+# model.conv1 = torch.nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+model.fc = torch.nn.Linear(in_features=2048, out_features=1000, bias=True)
 
 # Training
 def train(epoch, dir_path=None, plotter=None) -> None:
@@ -72,7 +96,7 @@ def train(epoch, dir_path=None, plotter=None) -> None:
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
             correct_5 += (
-                torch.eq(predicted_top5, labels.view(-1, 1)).sum().float().item()
+                torch.eq(predicted_top5, targets.view(-1, 1)).sum().float().item()
             )
 
             tepoch.set_postfix(
@@ -107,7 +131,7 @@ def test(epoch, dir_path=None, plotter=None) -> None:
                 tepoch.set_description(f"Test Epoch {epoch}")
 
                 inputs, targets = inputs.to(device), targets.to(device)
-                outputs = net(inputs)
+                outputs = model(inputs)
                 loss = criterion(outputs, targets)
 
                 test_loss += loss.item()
@@ -116,7 +140,7 @@ def test(epoch, dir_path=None, plotter=None) -> None:
                 total += targets.size(0)
                 correct += predicted.eq(targets).sum().item()
                 correct_5 += (
-                    torch.eq(predicted_top5, labels.view(-1, 1)).sum().float().item()
+                    torch.eq(predicted_top5, targets.view(-1, 1)).sum().float().item()
                 )
 
                 tepoch.set_postfix(
@@ -146,34 +170,26 @@ def test(epoch, dir_path=None, plotter=None) -> None:
     # return (epoch, test_loss, acc)
 
 
-model_list = [
-    torch.hub.load("pytorch/vision:v0.10.0", "resnet50", pretrained=True),
-    # torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True),
-    # torch.hub.load('pytorch/vision:v0.10.0', 'shufflenet_v2_x1_0', pretrained=True),
-    # torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True),
-    # models.efficientnet_b1(pretrained=True),
-    # models.mnasnet1_0(pretrained=True),
-    # models.mobilenet_v2(pretrained=True),
-    # models.resnext50_32x4d(pretrained=True),
-    ]
-
 start_epoch = 0
 max_epoch = 50
 
 for model in model_list:
     netkey = model._get_name()
     log_path = "outputs/" + netkey
-    net = net.to(device)
+    model = model.to(device)
 
     os.makedirs(log_path, exist_ok=True)
 
     with open(log_path + "/log.txt", "w") as f:
         f.write("Networks : %s\n" % netkey)
-        m_info = summary(net, (1, 3, input_size, input_size), verbose=0)
+        m_info = summary(model, (1, 3, input_size, input_size), verbose=0)
         f.write("%s\n" % str(m_info))
 
-    optimizer = torch.optim.SGD(model.conv1.parameters(), lr = 0.001, momentum=0.9)
+    # optimizer = torch.optim.SGD(model.conv1.parameters(), lr = 0.001, momentum=0.9)
+    ## original loss and optim config
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
+    ##########################
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
     #     optimizer, T_max=int(max_epoch * 1.0)
     # )
@@ -183,7 +199,7 @@ for model in model_list:
     #     print("==> Resuming from checkpoint..")
     #     # assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
     #     checkpoint = torch.load(log_path + "/ckpt.pth")
-    #     net.load_state_dict(checkpoint["net"])
+    #     model.load_state_dict(checkpoint["net"])
     #     scheduler.load_state_dict(checkpoint["scheduler"])
     #     optimizer.load_state_dict(checkpoint["optimizer"])
     #     best_acc = checkpoint["acc"]
