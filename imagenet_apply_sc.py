@@ -8,8 +8,8 @@ from utils import SeamCarvingResize, Resize
 
 imagenet_path = "C:/imagenet/"
 input_size_list = [
-    64,
-    # 128,
+    # 64,
+    128,
     # 160,
     # 192,
     # 224,
@@ -58,5 +58,6 @@ for input_size in input_size_list:
         fname = dataset.imgs[i][0].replace("\\", "/").split("/")
         fname[2] = fname[2] + "_%d" % input_size
         curr_dir_path = "/".join(fname)
-        print(curr_dir_path)
+        if i % 500 == 0:
+            print(curr_dir_path)
         images.save(curr_dir_path)
