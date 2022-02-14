@@ -7,6 +7,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow import keras
 from PIL import Image
+from torchvision.datasets import ImageFolder
 from image_dataset import image_dataset_from_directory
 from carve import resize
 
@@ -161,3 +162,5 @@ def channel_repeat(images: np.ndarray = None, out_channel: int = 64) -> np.ndarr
 
 # a = np.array((range(3*5*5))).reshape(1, 3, 5, 5)
 # b = channel_repeat(a, 100)
+
+# dataset = ImageFolder(root="E:/imagenet-mini/train")
