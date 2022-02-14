@@ -29,7 +29,7 @@ model_list = [
     # models.resnext50_32x4d(pretrained=True),
 ]
 
-input_size = 128
+input_size = 196
 resize_size = int(input_size * 256 / 224)
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
 energy_mode = "backward"
@@ -53,6 +53,7 @@ test_loader = torch.utils.data.DataLoader(
     shuffle=False,
     num_workers=0,
 )
+FIGURE_OPT = False
 
 with torch.no_grad():
     for model in model_list:
@@ -111,133 +112,138 @@ with torch.no_grad():
                 .astype(np.bool_)
             )
 
-            ## True case plot...
-            true_image_idx = np.where(top_1_list == True)[0][-1]
-            true_image_num = i * test_loader.batch_size + true_image_idx
-            true_image = Image.open(
-                test_loader.dataset.imgs[true_image_num][0].replace("\\", "/")
-            ).convert("RGB")
-            true_image_resized = transforms.Resize(
-                resize_size, interpolation=interpolation
-            )(true_image)
-            true_image_sc = np.array(
-                SeamCarvingResize(resize_size, energy_mode=energy_mode)(
-                    true_image_resized
+            if FIGURE_OPT:
+                ## True case plot...
+                true_image_idx = np.where(top_1_list == True)[0][-1]
+                true_image_num = i * test_loader.batch_size + true_image_idx
+                true_image = Image.open(
+                    test_loader.dataset.imgs[true_image_num][0].replace("\\", "/")
+                ).convert("RGB")
+                true_image_resized = transforms.Resize(
+                    resize_size, interpolation=interpolation
+                )(true_image)
+                true_image_sc = np.array(
+                    SeamCarvingResize(resize_size, energy_mode=energy_mode)(
+                        true_image_resized
+                    )
                 )
-            )
-            true_image_label = predicted.detach().cpu().numpy()[true_image_idx]
-            true_image_label_5 = predicted_top5.detach().cpu().numpy()[true_image_idx]
-            true_label = dataset.classes[true_image_label][0]
-            true_label_5 = np.array(dataset.classes, dtype=object)[true_image_label_5]
-            true_prob = torch.nn.Softmax(dim=1)(outputs)[true_image_idx]
-            prob_top5, _ = torch.topk(true_prob, 5)
-            prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
-            ground_truth = dataset.classes[labels[true_image_idx].item()][0]
+                true_image_label = predicted.detach().cpu().numpy()[true_image_idx]
+                true_image_label_5 = predicted_top5.detach().cpu().numpy()[true_image_idx]
+                true_label = dataset.classes[true_image_label][0]
+                true_label_5 = np.array(dataset.classes, dtype=object)[true_image_label_5]
+                true_prob = torch.nn.Softmax(dim=1)(outputs)[true_image_idx]
+                prob_top5, _ = torch.topk(true_prob, 5)
+                prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
+                ground_truth = dataset.classes[labels[true_image_idx].item()][0]
 
-            fig1 = plt.figure(1)
-            plt.subplot(311)
-            plt.imshow(true_image, aspect="equal")
+                plt.ioff()
+                fig1 = plt.figure()
+                plt.subplot(311)
+                plt.imshow(true_image, aspect="equal")
 
-            plt.subplot(312)
-            plt.imshow(true_image_sc, aspect="equal")
+                plt.subplot(312)
+                plt.imshow(true_image_sc, aspect="equal")
 
-            plt.subplot(313)
-            df = pd.DataFrame(
-                prob_top5.reshape(-1, 5),
-                columns=[
-                    true_label_5[0][0],
-                    true_label_5[1][0],
-                    true_label_5[2][0],
-                    true_label_5[3][0],
-                    true_label_5[4][0],
-                ],
-            )
-            plt.table(cellText=df.values, colLabels=df.columns, loc="center")
-            plt.axis("off")
-
-            plt.suptitle(
-                "[%s] top-1 True, top-5 True \n%s"
-                % (
-                    ground_truth,
-                    test_loader.dataset.imgs[true_image_num][0].replace("\\", "/"),
+                plt.subplot(313)
+                df = pd.DataFrame(
+                    prob_top5.reshape(-1, 5),
+                    columns=[
+                        true_label_5[0][0],
+                        true_label_5[1][0],
+                        true_label_5[2][0],
+                        true_label_5[3][0],
+                        true_label_5[4][0],
+                    ],
                 )
-            )
-            plt.tight_layout()
-            # plt.show()
-            fig1.savefig(
-                "outs/True_%s"
-                % test_loader.dataset.imgs[true_image_num][0]
-                .replace("\\", "/")
-                .split("/")[-1],
-                dpi=200,
-            )
-            plt.close(fig1)
+                plt.table(cellText=df.values, colLabels=df.columns, loc="center")
+                plt.axis("off")
 
-            ## Flase case plot...
-            false_image_idx = np.where(top_1_list == False)[0][-1]
-            false_image_num = i * test_loader.batch_size + false_image_idx
-            false_image = Image.open(
-                test_loader.dataset.imgs[false_image_num][0].replace("\\", "/")
-            ).convert("RGB")
-            false_image_resized = transforms.Resize(
-                resize_size, interpolation=interpolation
-            )(false_image)
-            false_image_sc = np.array(
-                SeamCarvingResize(resize_size, energy_mode=energy_mode)(
-                    false_image_resized
+                plt.suptitle(
+                    "[%s] top-1 True, top-5 True \n%s"
+                    % (
+                        ground_truth,
+                        test_loader.dataset.imgs[true_image_num][0].replace("\\", "/"),
+                    )
                 )
-            )
-            false_image_label = predicted.detach().cpu().numpy()[false_image_idx]
-            false_image_label_5 = predicted_top5.detach().cpu().numpy()[false_image_idx]
-            false_label = dataset.classes[false_image_label][0]
-            false_label_5 = np.array(dataset.classes, dtype=object)[false_image_label_5]
-            false_prob = torch.nn.Softmax(dim=1)(outputs)[false_image_idx]
-            prob_top5, _ = torch.topk(false_prob, 5)
-            prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
-            ground_truth = dataset.classes[labels[false_image_idx].item()][0]
-
-            fig2 = plt.figure(2)
-            plt.subplot(311)
-            plt.imshow(false_image, aspect="equal")
-
-            plt.subplot(312)
-            plt.imshow(false_image_sc, aspect="equal")
-
-            plt.subplot(313)
-            df = pd.DataFrame(
-                prob_top5.reshape(-1, 5),
-                columns=[
-                    false_label_5[0][0],
-                    false_label_5[1][0],
-                    false_label_5[2][0],
-                    false_label_5[3][0],
-                    false_label_5[4][0],
-                ],
-            )
-            plt.table(cellText=df.values, colLabels=df.columns, loc="center")
-            plt.axis("off")
-
-            plt.suptitle(
-                "[%s] top-1 False, top-5 %s \n%s"
-                % (
-                    ground_truth,
-                    bool(
-                        torch.eq(predicted_top5, labels.view(-1, 1))
-                        .sum(axis=1)[false_image_idx]
-                        .item()
-                    ),
-                    test_loader.dataset.imgs[false_image_num][0].replace("\\", "/"),
+                plt.tight_layout()
+                # plt.show()
+                fig1.savefig(
+                    "outs/True_%s"
+                    % test_loader.dataset.imgs[true_image_num][0]
+                    .replace("\\", "/")
+                    .split("/")[-1],
+                    dpi=200,
                 )
-            )
-            plt.tight_layout()
-            # plt.show()
-            fig2.savefig(
-                "outs/False_%s"
-                % test_loader.dataset.imgs[false_image_num][0]
-                .replace("\\", "/")
-                .split("/")[-1],
-                dpi=200,
-            )
-            plt.close(fig2)
+                plt.close("all")
+                plt.clf()
+
+                ## Flase case plot...
+                false_image_idx = np.where(top_1_list == False)[0][-1]
+                false_image_num = i * test_loader.batch_size + false_image_idx
+                false_image = Image.open(
+                    test_loader.dataset.imgs[false_image_num][0].replace("\\", "/")
+                ).convert("RGB")
+                false_image_resized = transforms.Resize(
+                    resize_size, interpolation=interpolation
+                )(false_image)
+                false_image_sc = np.array(
+                    SeamCarvingResize(resize_size, energy_mode=energy_mode)(
+                        false_image_resized
+                    )
+                )
+                false_image_label = predicted.detach().cpu().numpy()[false_image_idx]
+                false_image_label_5 = predicted_top5.detach().cpu().numpy()[false_image_idx]
+                false_label = dataset.classes[false_image_label][0]
+                false_label_5 = np.array(dataset.classes, dtype=object)[false_image_label_5]
+                false_prob = torch.nn.Softmax(dim=1)(outputs)[false_image_idx]
+                prob_top5, _ = torch.topk(false_prob, 5)
+                prob_top5 = prob_top5.detach().cpu().numpy().astype(np.float32)
+                ground_truth = dataset.classes[labels[false_image_idx].item()][0]
+
+                plt.ioff()
+                fig2 = plt.figure()
+                plt.subplot(311)
+                plt.imshow(false_image, aspect="equal")
+
+                plt.subplot(312)
+                plt.imshow(false_image_sc, aspect="equal")
+
+                plt.subplot(313)
+                df = pd.DataFrame(
+                    prob_top5.reshape(-1, 5),
+                    columns=[
+                        false_label_5[0][0],
+                        false_label_5[1][0],
+                        false_label_5[2][0],
+                        false_label_5[3][0],
+                        false_label_5[4][0],
+                    ],
+                )
+                plt.table(cellText=df.values, colLabels=df.columns, loc="center")
+                plt.axis("off")
+
+                plt.suptitle(
+                    "[%s] top-1 False, top-5 %s \n%s"
+                    % (
+                        ground_truth,
+                        bool(
+                            torch.eq(predicted_top5, labels.view(-1, 1))
+                            .sum(axis=1)[false_image_idx]
+                            .item()
+                        ),
+                        test_loader.dataset.imgs[false_image_num][0].replace("\\", "/"),
+                    )
+                )
+                plt.tight_layout()
+                # plt.show()
+                fig2.savefig(
+                    "outs/False_%s"
+                    % test_loader.dataset.imgs[false_image_num][0]
+                    .replace("\\", "/")
+                    .split("/")[-1],
+                    dpi=200,
+                )
+                plt.close("all")
+                plt.clf()
 
         f.close()

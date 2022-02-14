@@ -7,9 +7,15 @@ from PIL import Image
 from utils import SeamCarvingResize, Resize
 
 imagenet_path = "C:/imagenet/"
-input_size_list = [64, 128, 160, 192, 224]
+input_size_list = [64,
+                   # 128,
+                   # 160,
+                   # 192,
+                   # 224,
+                   ]
 interpolation = torchvision.transforms.InterpolationMode.BILINEAR
 energy_mode = "backward"
+split = "train"
 
 for input_size in input_size_list:
     resize_size = int(input_size * 256 / 224)
@@ -24,7 +30,7 @@ for input_size in input_size_list:
     )
 
     dataset = torchvision.datasets.ImageNet(
-        root=imagenet_path, split="val", transform=preprocess
+        root=imagenet_path, split=split, transform=preprocess
     )
     test_loader = torch.utils.data.DataLoader(
         dataset,
@@ -34,15 +40,15 @@ for input_size in input_size_list:
     )
 
     ## MAKE DIRECTORIES...
-    print("making val_%d directory..." % input_size)
+    print("making %s_%d directory..." % (split, input_size))
     for path in dataset.imgs:
         fname = path[0].replace("\\", "/").split("/")
         fname[2] = fname[2] + "_%d" % input_size
         curr_dir_path = "/".join(fname[:-1])
-        os.makedirs(curr_dir_path, exist_ok=True)
+        os.makedirs(curr_dir_path, exist_ok=False)
 
     ## WRITE CONFIG LOG...
-    with open("C:/imagenet/val_%d/config.txt" % input_size, "w") as f:
+    with open("C:/imagenet/%s_%d/config.txt" % (split, input_size), "w") as f:
         f.write("%s" % str(preprocess))
 
     for i, data in enumerate(test_loader):
