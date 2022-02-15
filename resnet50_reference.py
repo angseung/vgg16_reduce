@@ -1,4 +1,5 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICE"] = "1"
 import torch
 from PIL import Image
 import torchvision
@@ -14,10 +15,12 @@ from carve import resize
 
 if torch.cuda.is_available():
     device = "cuda"
+    # device = torch.device("cuda:1")
 else:
     device = "cpu"
 
 torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
+print(torch.cuda.current_device())
 
 model_list = [
     torch.hub.load("pytorch/vision:v0.10.0", "resnet50", pretrained=True),
@@ -29,6 +32,8 @@ model_list = [
     # models.mobilenet_v2(pretrained=True),
     # models.resnext50_32x4d(pretrained=True),
 ]
+
+best_acc = 0
 imagenet_path = "C:/imagenet"
 best_acc = 0
 input_size = 64
@@ -39,7 +44,8 @@ mode = "fine-tune"  # ["fine-tune", "feature-extract"]
 
 preprocess = transforms.Compose(
     [
-        Resize(resize_size, aspect="wide"),
+        # Resize(resize_size, aspect="wide"),
+        transforms.Resize(resize_size, interpolation=interpolation),
         transforms.CenterCrop(input_size),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -50,7 +56,7 @@ traindataset = torchvision.datasets.ImageNet(
     )
 trainloader = torch.utils.data.DataLoader(
     traindataset,
-    batch_size=128,
+    batch_size=256,
     shuffle=True,
     num_workers=0,
 )
@@ -60,7 +66,7 @@ testdataset = torchvision.datasets.ImageNet(
     )
 testloader = torch.utils.data.DataLoader(
     testdataset,
-    batch_size=128,
+    batch_size=256,
     shuffle=False,
     num_workers=0,
 )
@@ -105,13 +111,15 @@ def train(epoch, dir_path=None, plotter=None) -> None:
             )
 
             tepoch.set_postfix(
-                loss=train_loss / (batch_idx + 1), accuracy=100.0 * correct / total
+                loss=train_loss / (batch_idx + 1), accuracy=100.0 * correct / total,
+                top_5=100.0 * correct_5 / total
             )
 
     with open("outputs_base/" + dir_path + "/log.txt", "a") as f:
         f.write(
-            "Epoch [%d] |Train| Loss: %.3f, Acc: %.3f \t"
-            % (epoch, train_loss / (batch_idx + 1), 100.0 * correct / total)
+            "Epoch [%d] |Train| Loss: %.3f, Acc: %.3f %.3f\t"
+            % (epoch, train_loss / (batch_idx + 1), 100.0 * correct / total,
+               100.0 * correct_5 / total)
         )
 
     # return (epoch, train_loss / (batch_idx + 1), 100.0 * correct / total)
@@ -149,9 +157,11 @@ def test(epoch, dir_path=None, plotter=None) -> None:
                 )
 
                 tepoch.set_postfix(
-                    loss=test_loss / (batch_idx + 1), accuracy=100.0 * correct / total
+                    loss=test_loss / (batch_idx + 1), accuracy=100.0 * correct / total,
+                top_5=100.0 * correct_5 / total
                 )
     acc = 100.0 * correct / total
+    acc5 = 100.0 * correct_5 / total
 
     # Save checkpoint.
     if acc > best_acc:
@@ -159,7 +169,7 @@ def test(epoch, dir_path=None, plotter=None) -> None:
         state = {
             "net": model.state_dict(),
             "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict(),
+            # "scheduler": scheduler.state_dict(),
             "acc": acc,
             "epoch": epoch,
         }
@@ -170,7 +180,7 @@ def test(epoch, dir_path=None, plotter=None) -> None:
         best_acc = acc
 
     with open(dir_path + "/log.txt", "a") as f:
-        f.write("|Test| Loss: %.3f, Acc: %.3f \n" % (test_loss / (batch_idx + 1), acc))
+        f.write("|Test| Loss: %.3f, Acc: %.3f %.3f\n" % (test_loss / (batch_idx + 1), acc, acc5))
 
     # return (epoch, test_loss, acc)
 
