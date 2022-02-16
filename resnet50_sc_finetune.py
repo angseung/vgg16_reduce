@@ -20,12 +20,12 @@ else:
     device = "cpu"
 
 torch.hub._validate_not_a_forked_repo = lambda a, b, c: True
-print(torch.cuda.current_device())
+# print(torch.cuda.current_device())
 
 model_list = [
-    torch.hub.load("pytorch/vision:v0.10.0", "resnet50", pretrained=True),
+    # torch.hub.load("pytorch/vision:v0.10.0", "resnet50", pretrained=True),
     # torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True),
-    # torch.hub.load('pytorch/vision:v0.10.0', 'shufflenet_v2_x1_0', pretrained=True),
+    torch.hub.load('pytorch/vision:v0.10.0', 'shufflenet_v2_x1_0', pretrained=True),
     # torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True),
     # models.efficientnet_b1(pretrained=True),
     # models.mnasnet1_0(pretrained=True),
@@ -70,7 +70,7 @@ if mode == "feature-extract":
         params.requires_grad = False
 
 # model.conv1 = torch.nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-# model.fc = torch.nn.Linear(in_features=2048, out_features=1000, bias=True)
+# model.fc = torch.nn.Linear(in_features=1024, out_features=1000, bias=True)
 
 # Training
 def train(epoch, dir_path=None, plotter=None) -> None:
@@ -195,7 +195,7 @@ for model in model_list:
 
     # optimizer = torch.optim.SGD(model.conv1.parameters(), lr = 0.001, momentum=0.9)
     ## original loss and optim config
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.0005, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
     ##########################
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
